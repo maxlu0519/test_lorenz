@@ -1,0 +1,107 @@
+<html>
+<head>
+<title>solusion_max.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #d55fde; font-style: italic;}
+.s1 { color: #bbbbbb;}
+.s2 { color: #5c6370; font-style: italic;}
+.s3 { color: #d19a66;}
+.s4 { color: #89ca78;}
+.s5 { color: #2bbac5;}
+</style>
+</head>
+<body bgcolor="#282c34">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+solusion_max.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">torch</span>
+<span class="s0">import </span><span class="s1">torch.nn </span><span class="s0">as </span><span class="s1">nn</span>
+<span class="s0">from </span><span class="s1">torch.autograd </span><span class="s0">import </span><span class="s1">gradcheck</span>
+<span class="s0">from </span><span class="s1">data_pre </span><span class="s0">import </span><span class="s1">data, sign</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+
+<span class="s1">torch.autograd.set_detect_anomaly(</span><span class="s0">True</span><span class="s1">)</span>
+
+
+<span class="s2"># 定义洛伦兹方程模型类</span>
+<span class="s0">class </span><span class="s1">LorenzModel(nn.Module):</span>
+    <span class="s0">def </span><span class="s1">__init__(self):</span>
+        <span class="s1">super(LorenzModel, self).__init__()</span>
+        <span class="s2"># 初始化参数为可学习的张量</span>
+        <span class="s1">self.sigma = nn.Parameter(torch.tensor([</span><span class="s3">1.</span><span class="s1">]))</span>
+        <span class="s1">self.rho = nn.Parameter(torch.tensor([</span><span class="s3">1.</span><span class="s1">]))</span>
+        <span class="s1">self.beta = nn.Parameter(torch.tensor([</span><span class="s3">1.</span><span class="s1">]))</span>
+        <span class="s1">self.stats = nn.Parameter(torch.tensor([</span><span class="s3">1.</span><span class="s1">, </span><span class="s3">1.</span><span class="s1">, </span><span class="s3">1.</span><span class="s1">, </span><span class="s3">0</span><span class="s1">]))</span>
+
+    <span class="s0">def </span><span class="s1">lorenz(self, x, y, z):</span>
+        <span class="s1">dx = self.sigma * (y - x)</span>
+        <span class="s1">dy = x * (self.rho - z) - y</span>
+        <span class="s1">dz = x * y - self.beta * z</span>
+        <span class="s0">return </span><span class="s1">dx, dy, dz</span>
+
+    <span class="s2"># 由参数获取预测值</span>
+    <span class="s0">def </span><span class="s1">forward(self, t, dt=</span><span class="s3">0.01</span><span class="s1">):</span>
+        <span class="s1">data_lorenz = torch.empty((len(t), </span><span class="s3">4</span><span class="s1">))</span>
+        <span class="s1">data_lorenz[</span><span class="s3">0</span><span class="s1">] = self.stats</span>
+        <span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">range(len(t) - </span><span class="s3">1</span><span class="s1">):</span>
+            <span class="s1">dx, dy, dz = self.lorenz(data_lorenz[i][</span><span class="s3">0</span><span class="s1">], data_lorenz[i][</span><span class="s3">1</span><span class="s1">], data_lorenz[i][</span><span class="s3">2</span><span class="s1">])</span>
+            <span class="s1">data_lorenz[i + </span><span class="s3">1</span><span class="s1">][</span><span class="s3">0</span><span class="s1">] = data_lorenz[i][</span><span class="s3">0</span><span class="s1">] + dx * dt</span>
+            <span class="s1">data_lorenz[i + </span><span class="s3">1</span><span class="s1">][</span><span class="s3">1</span><span class="s1">] = data_lorenz[i][</span><span class="s3">1</span><span class="s1">] + dy * dt</span>
+            <span class="s1">data_lorenz[i + </span><span class="s3">1</span><span class="s1">][</span><span class="s3">2</span><span class="s1">] = data_lorenz[i][</span><span class="s3">2</span><span class="s1">] + dz * dt</span>
+            <span class="s1">data_lorenz[i + </span><span class="s3">1</span><span class="s1">][</span><span class="s3">3</span><span class="s1">] = dt * (i + </span><span class="s3">1</span><span class="s1">)</span>
+        <span class="s0">return </span><span class="s1">data_lorenz</span>
+
+
+<span class="s2"># 创建模型实例</span>
+<span class="s1">model1 = LorenzModel()</span>
+<span class="s2"># 定义损失函数</span>
+<span class="s1">criterion = nn.MSELoss()</span>
+<span class="s2"># 设置时间范围</span>
+
+<span class="s1">t = np.arange(</span><span class="s3">0</span><span class="s1">, </span><span class="s3">40</span><span class="s1">, </span><span class="s3">0.01</span><span class="s1">)</span>
+<span class="s1">ray = len(t)</span>
+<span class="s2"># 模拟数据</span>
+
+
+<span class="s2"># 定义优化器</span>
+<span class="s1">optimizer = torch.optim.SGD(model1.parameters(), lr=</span><span class="s3">0.1</span><span class="s1">)</span>
+
+<span class="s1">loss_history = []</span>
+
+<span class="s0">for </span><span class="s1">epoch </span><span class="s0">in </span><span class="s1">range(</span><span class="s3">10</span><span class="s1">):</span>
+    <span class="s1">print(</span><span class="s4">f&quot;第</span><span class="s5">{</span><span class="s1">epoch + </span><span class="s3">1</span><span class="s5">}</span><span class="s4">轮训练&quot;</span><span class="s1">)</span>
+    <span class="s1">loss_sum = </span><span class="s3">0</span>
+    <span class="s1">data_lorenz = model1(t)</span>
+    <span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">range(len(data) - </span><span class="s3">1</span><span class="s1">):</span>
+        <span class="s0">for </span><span class="s1">j </span><span class="s0">in </span><span class="s1">range(len(data_lorenz) - </span><span class="s3">1</span><span class="s1">):</span>
+            <span class="s0">if </span><span class="s1">data[i][</span><span class="s3">3</span><span class="s1">] == data_lorenz[j][</span><span class="s3">3</span><span class="s1">]:</span>
+                <span class="s2"># 使用MSE损失函数</span>
+                <span class="s1">loss = criterion(data[i][:</span><span class="s3">3</span><span class="s1">], data_lorenz[j][:</span><span class="s3">3</span><span class="s1">])</span>
+                <span class="s1">print(</span><span class="s4">f&quot;匹配到的t为</span><span class="s5">{</span><span class="s1">j * </span><span class="s3">0.01</span><span class="s5">}</span><span class="s4">&quot;</span><span class="s1">)</span>
+                <span class="s1">print(</span><span class="s4">f&quot;当前匹配loss为</span><span class="s5">{</span><span class="s1">loss.item()</span><span class="s5">}</span><span class="s4">&quot;</span><span class="s1">)</span>
+                <span class="s2"># 计算梯度</span>
+                <span class="s1">loss.backward()</span>
+                <span class="s2"># 更新模型参数</span>
+                <span class="s1">optimizer.step()</span>
+                <span class="s1">print(</span><span class="s4">f&quot;更新后的参数为:&quot;</span>
+                      <span class="s4">f&quot;sigma:</span><span class="s5">{</span><span class="s1">model1.sigma.item()</span><span class="s5">}</span><span class="s4">, &quot;</span>
+                      <span class="s4">f&quot;rho:</span><span class="s5">{</span><span class="s1">model1.rho.item()</span><span class="s5">}</span><span class="s4">, &quot;</span>
+                      <span class="s4">f&quot;beta:</span><span class="s5">{</span><span class="s1">model1.beta.item()</span><span class="s5">}</span><span class="s4">, &quot;</span>
+                      <span class="s4">f&quot;stats:</span><span class="s5">{</span><span class="s1">model1.stats.item()</span><span class="s5">}</span><span class="s4">&quot;</span><span class="s1">)</span>
+                <span class="s1">loss_sum += loss.item()</span>
+    <span class="s2"># 清除梯度信息</span>
+    <span class="s1">optimizer.zero_grad()</span>
+
+    <span class="s0">if </span><span class="s1">epoch % </span><span class="s3">1 </span><span class="s1">== </span><span class="s3">0</span><span class="s1">:</span>
+        <span class="s1">print(</span><span class="s4">f&quot;第</span><span class="s5">{</span><span class="s1">epoch + </span><span class="s3">1</span><span class="s5">}</span><span class="s4">轮训练总loss为：</span><span class="s5">{</span><span class="s1">loss_sum</span><span class="s5">}</span><span class="s4">&quot;</span><span class="s1">)</span>
+
+        <span class="s2"># 记录损失函数值历史信息</span>
+    <span class="s1">loss_history.append(loss_sum / len(t))</span>
+    <span class="s2"># 训练完成，显示结果</span>
+<span class="s1">print(</span><span class="s4">f&quot;sigma:</span><span class="s5">{</span><span class="s1">model1.sigma.item()</span><span class="s5">}</span><span class="s4">, rho:</span><span class="s5">{</span><span class="s1">model1.rho.item()</span><span class="s5">}</span><span class="s4">, beta:</span><span class="s5">{</span><span class="s1">model1.beta.item()</span><span class="s5">}</span><span class="s4">, stats:</span><span class="s5">{</span><span class="s1">model1.stats</span><span class="s5">}</span><span class="s4">&quot;</span><span class="s1">)</span>
+</pre>
+</body>
+</html>

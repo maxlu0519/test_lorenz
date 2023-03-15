@@ -1,0 +1,81 @@
+<html>
+<head>
+<title>solusion.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #d55fde; font-style: italic;}
+.s1 { color: #bbbbbb;}
+.s2 { color: #5c6370; font-style: italic;}
+.s3 { color: #d19a66;}
+.s4 { color: #89ca78;}
+</style>
+</head>
+<body bgcolor="#282c34">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+solusion.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">torch</span>
+<span class="s0">from </span><span class="s1">data_pre </span><span class="s0">import </span><span class="s1">data, sign</span>
+<span class="s0">from </span><span class="s1">scipy.integrate </span><span class="s0">import </span><span class="s1">odeint</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+<span class="s0">import </span><span class="s1">matplotlib.pyplot </span><span class="s0">as </span><span class="s1">plt</span>
+
+
+<span class="s2"># 定义洛伦兹方程</span>
+<span class="s0">def </span><span class="s1">lorenz(state):</span>
+    <span class="s2"># 初始化参数</span>
+    <span class="s1">params = torch.tensor([</span><span class="s3">1.</span><span class="s1">, </span><span class="s3">1.</span><span class="s1">, </span><span class="s3">1.</span><span class="s1">], requires_grad=</span><span class="s0">True</span><span class="s1">)</span>
+
+    <span class="s1">beta = params[</span><span class="s3">0</span><span class="s1">]</span>
+    <span class="s1">rho = params[</span><span class="s3">1</span><span class="s1">]</span>
+    <span class="s1">sigma = params[</span><span class="s3">2</span><span class="s1">]</span>
+    <span class="s1">dx = sigma * (state[</span><span class="s3">1</span><span class="s1">] - state[</span><span class="s3">0</span><span class="s1">])</span>
+    <span class="s1">dy = state[</span><span class="s3">0</span><span class="s1">] * (rho - state[</span><span class="s3">2</span><span class="s1">]) - state[</span><span class="s3">1</span><span class="s1">]</span>
+    <span class="s1">dz = state[</span><span class="s3">0</span><span class="s1">] * state[</span><span class="s3">1</span><span class="s1">] - beta * state[</span><span class="s3">2</span><span class="s1">]</span>
+    <span class="s0">return </span><span class="s1">dx, dy, dz</span>
+
+
+<span class="s2"># 设置学习率</span>
+
+<span class="s1">learning_rate = </span><span class="s3">0.001</span>
+<span class="s1">state0 = torch.tensor([</span><span class="s3">1.</span><span class="s1">, </span><span class="s3">1.</span><span class="s1">, </span><span class="s3">1.</span><span class="s1">], requires_grad=</span><span class="s0">True</span><span class="s1">)</span>
+<span class="s1">t = np.arange(</span><span class="s3">0</span><span class="s1">, </span><span class="s3">40</span><span class="s1">, </span><span class="s3">0.01</span><span class="s1">)</span>
+<span class="s1">dt = </span><span class="s3">0.01</span>
+<span class="s2"># 求解洛伦兹方程</span>
+<span class="s1">temp = state0</span>
+<span class="s1">states = torch.tensor([])</span>
+<span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">range(len(t)):</span>
+    <span class="s1">dx0, dy0, dz0 = lorenz(temp)</span>
+    <span class="s1">temp = [state0[</span><span class="s3">0</span><span class="s1">] + dx0 * dt, state0[</span><span class="s3">1</span><span class="s1">] + dy0 * dt, state0[</span><span class="s3">2</span><span class="s1">] + dz0 * dt]</span>
+    <span class="s1">states = torch.cat((states, )</span>
+<span class="s2"># 绘制</span>
+<span class="s1">fig = plt.figure()</span>
+<span class="s1">ax = fig.add_subplot(</span><span class="s3">111</span><span class="s1">, projection=</span><span class="s4">'3d'</span><span class="s1">)</span>
+<span class="s1">ax.plot(states[:, </span><span class="s3">0</span><span class="s1">].detach().numpy(), states[:, </span><span class="s3">1</span><span class="s1">].detach().numpy(), states[:, </span><span class="s3">2</span><span class="s1">].detach().numpy())</span>
+<span class="s1">plt.title(</span><span class="s4">'initial chart'</span><span class="s1">)</span>
+<span class="s1">plt.show()</span>
+
+<span class="s2"># 参考</span>
+<span class="s2"># for t in np.arange(0, 40, 0.01):</span>
+<span class="s2">#     loss = 0.</span>
+<span class="s2">#</span>
+<span class="s2">#     for i in range(len(data) - 1):</span>
+<span class="s2">#         x, y, z, t_sign = data[i]</span>
+<span class="s2">#         dt = 0.01</span>
+<span class="s2">#         dx_pred, dy_pred, dz_pred = lorenz(x, y, z, params)</span>
+<span class="s2">#         dx_true, dy_true, dz_true, _ = data[i + 1] - data[i]</span>
+<span class="s2">#</span>
+<span class="s2">#         loss += ((dx_pred * dt) - dx_true) ** 2 + ((dy_pred * dt) - dy_true) ** 2 + ((dz_pred * dt) - dz_true) ** 2</span>
+<span class="s2">#</span>
+<span class="s2">#     loss.backward()</span>
+<span class="s2">#</span>
+<span class="s2">#     with torch.no_grad():</span>
+<span class="s2">#         params -= learning_rate * params.grad</span>
+<span class="s2">#         params.grad.zero_()</span>
+<span class="s2">#</span>
+<span class="s2"># print(params)</span>
+</pre>
+</body>
+</html>

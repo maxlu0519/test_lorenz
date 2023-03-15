@@ -1,0 +1,40 @@
+<html>
+<head>
+<title>data_pre.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #d55fde; font-style: italic;}
+.s1 { color: #bbbbbb;}
+.s2 { color: #89ca78;}
+.s3 { color: #2bbac5;}
+.s4 { color: #5c6370; font-style: italic;}
+.s5 { color: #d19a66;}
+</style>
+</head>
+<body bgcolor="#282c34">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+data_pre.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">torch</span>
+
+
+<span class="s1">arr_all = []</span>
+<span class="s0">with  </span><span class="s1">open(</span><span class="s2">'../Lorenz_data/dataset.txt'</span><span class="s1">) </span><span class="s0">as </span><span class="s1">f:</span>
+    <span class="s1">temp = f.readlines()</span>
+    <span class="s1">print(temp)</span>
+    <span class="s1">f.close()</span>
+
+<span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">temp:</span>
+    <span class="s1">i = i.strip(</span><span class="s2">'[]</span><span class="s3">\n </span><span class="s2">'</span><span class="s1">)  </span><span class="s4"># 去掉字符串两端的中括号和换行符</span>
+    <span class="s1">arr = [float(x) </span><span class="s0">for </span><span class="s1">x </span><span class="s0">in </span><span class="s1">i.split()]  </span><span class="s4"># 用列表推导式，将列表中的每个元素转换成浮点数</span>
+    <span class="s1">print(arr)  </span><span class="s4"># 输出结果</span>
+    <span class="s1">arr_all.append(arr)</span>
+<span class="s1">print(arr_all)</span>
+
+<span class="s1">sign = torch.tensor(arr_all[</span><span class="s5">0</span><span class="s1">])</span>
+<span class="s1">data = torch.tensor(arr_all[</span><span class="s5">1</span><span class="s1">:])</span>
+</pre>
+</body>
+</html>
